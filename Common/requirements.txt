@@ -1,0 +1,2 @@
+# pip requirements. added by Irisa Wang
+ipython[all]
