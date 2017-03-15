@@ -1,0 +1,2 @@
+ipython[all]
+Django==1.8.3
