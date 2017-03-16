@@ -16,13 +16,13 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def read_file():
+def read_file(path):
     # f = open('./ppMachine.py')
 
     # path = os.path.join(BASE_DIR, 'view\\ppMachine.py').replace('\\', '/')
 
-    path = os.path.join(BASE_DIR, 'view\\ppMachine.py').replace('\\', '/')
-    path = path.replace('Server/ppServer/ppServer/view', '')
+    # path = os.path.join(BASE_DIR, 'view\\ppMachine.py').replace('\\', '/')
+    # path = path.replace('Server/ppServer/ppServer/view', '')
 
     f = open(path)
 
@@ -33,6 +33,7 @@ def read_file():
 
     ## 每个类所包含的json数据
     data = {}
+
     ## 最终返回的json数据
     res_data = []
 
@@ -43,6 +44,7 @@ def read_file():
     p_var_list = []
 
     ## 产品层面
+    obj_list = []
     p_list = []
     p_i_list = []
     m_list = []
@@ -55,6 +57,10 @@ def read_file():
     bef_m = ''
     bef_p = ''
 
+    obj_info_array_info = {}
+    p_info_array_info = {}
+    m_info_array_info = {}
+
 
     while line:
 
@@ -62,12 +68,41 @@ def read_file():
         正则表达式
         '''
         ## 匹配obj
-        obj_pattern = '.*#obj\s[A-Za-z0-9\u4e00-\u9fa5]+'
+        '''
+        obj 必须为顶格对齐
+        '''
+        obj_pattern = '#obj\s*.+'  ## [A-Za-z0-9\u4e00-\u9fa5]
         if re.match(obj_pattern, line) != None:
 
+            # print(re.match(obj_pattern, line).group().strip())
             value = print_format(re.match(obj_pattern, line).group())
 
+
             if flag == True:
+
+                if len(obj_info_array_info) > 0:
+                    obj_list.append(obj_info_array_info)
+                    data['obj'] = obj_list
+                else:
+                    class_info = {}
+                    class_info['class'] = ""
+
+                    class_info_array = []
+                    class_info_array.append(class_info)
+
+                    obj_info_array_info[bef_obj] = class_info_array
+
+                    obj_list.append(obj_info_array_info)
+                    data['obj'] = obj_list
+
+
+
+                p_list.append(p_info_array_info)
+                data['p'] = p_list
+
+                m_list.append(m_info_array_info)
+                data['m'] = m_list
+
 
                 bef_obj = ''
                 bef_m = ''
@@ -77,16 +112,20 @@ def read_file():
 
                 data = {}
 
-                data['obj'] = value
 
+                obj_list = []
                 p_list = []
                 p_i_list = []
                 m_list = []
                 m_i_list = []
                 m_f_list = []
 
+                obj_info_array_info = {}
+                p_info_array_info = {}
+                m_info_array_info = {}
+
             else:
-                data['obj'] = value
+
                 flag = True
 
             bef_obj = value
@@ -94,17 +133,38 @@ def read_file():
 
         ## 匹配class
         class_pattern = '.*class\s[A-Za-z0-9\u4e00-\u9fa5_]+'
-        if re.match(class_pattern, line) != None:
+        if re.match(class_pattern, line) != None and '#' not in line:
             value = print_format(re.match(class_pattern, line).group())
-            class_list.append(bef_obj + ' : ' + value)
-            data['class'] = class_list
+
+
+            class_info = {}
+            class_info['class'] = value
+
+
+            class_info_array = []
+            class_info_array.append(class_info)
+
+
+            obj_info_array_info[bef_obj] = class_info_array
+
+
+
 
         ## 匹配def
         def_pattern = '.*def\s[A-Za-z0-9\u4e00-\u9fa5_]+'
         if re.match(def_pattern, line) != None:
             value = print_format(re.match(def_pattern, line).group())
-            def_list.append(bef_m + ' : ' + value)
-            data['def'] = def_list
+
+            def_info = {}
+            def_info['def'] = value
+
+            def_info_array = []
+            def_info_array.append(def_info)
+
+            if bef_m != '':
+                m_info_array_info[bef_m] += def_info_array
+
+
 
         ## 匹配p
         if '=' in line:
@@ -112,18 +172,29 @@ def read_file():
             if re.match(p_pattern, line) != None:
                 value = re.match(p_pattern, line).group()
 
-                p_list.append(value.strip().split(' ')[1])
-                p_i_list.append(value.strip().split(' ')[1] + " : " + value.strip().split('=')[1])
-                data['p'] = p_list
-                data['p_i'] = p_i_list
+                p_info = {}
+                p_info['i'] = value.strip().split('=')[1]
+
+                p_info_array = []
+                p_info_array.append(p_info)
+
+                p_info_array_info[value.strip().split(' ')[1]] = p_info_array
 
                 bef_p = value.strip().split(' ')[1]
         else:
             p_pattern = '.*#p\s[A-Za-z0-9\u4e00-\u9fa5]+'
             if re.match(p_pattern, line) != None:
                 value = print_format(re.match(p_pattern, line).group())
-                p_list.append(value)
-                data['p'] = p_list
+
+                p_info = {}
+                p_info['i'] = ''
+
+                p_info_array = []
+                p_info_array.append(p_info)
+
+
+                p_info_array_info[value] = p_info_array
+
 
                 bef_p = value
 
@@ -133,18 +204,29 @@ def read_file():
             if re.match(m_pattern, line) != None:
                 value = re.match(m_pattern, line).group()
 
-                m_list.append(value.strip().split(' ')[1])
-                m_i_list.append(value.strip().split(' ')[1] + " : " + value.strip().split('=')[1])
-                data['m'] = m_list
-                data['m_i'] = m_i_list
+                m_info = {}
+                m_info['i'] = value.strip().split('=')[1]
+
+                m_info_array = []
+                m_info_array.append(m_info)
+
+                m_info_array_info[value.strip().split(' ')[1]] = m_info_array
+
 
                 bef_m = value.strip().split(' ')[1]
         else:
             m_pattern = '.*#m\s[A-Za-z0-9\u4e00-\u9fa5]+'
             if re.match(m_pattern, line) != None:
                 value = print_format(re.match(m_pattern, line).group())
-                m_list.append(value)
-                data['m'] = m_list
+
+                m_info = {}
+                m_info['i'] = ''
+
+                m_info_array = []
+                m_info_array.append(m_info)
+
+                m_info_array_info[value] = m_info_array
+
 
                 bef_m = value
 
@@ -153,7 +235,17 @@ def read_file():
         if re.match(f_pattern, line) != None:
             value = print_format(re.match(f_pattern, line).group())
             m_f_list.append(bef_m + ' : ' + value)
-            data['m_f'] = m_f_list
+
+            f_info = {}
+            f_info['f'] = value
+
+            f_info_array = []
+            f_info_array.append(f_info)
+
+            if bef_m != '':
+                m_info_array_info[bef_m] += f_info_array
+
+
 
 
         ## 匹配创建人、创建时间、更新人、更新时间
@@ -166,36 +258,66 @@ def read_file():
 
 
 
-        # i_pattern = '.*#i\s[A-Za-z0-9\u4e00-\u9fa5]+'
-        # match_process(i_pattern, 'i', line)
-
-        # _pattern = '.*##\s[A-Za-z0-9\u4e00-\u9fa5]+'
-        # match_process(_pattern, '##', line)
-
-
 
 
         line = f.readline()
 
         if bef_p.strip() != '' and '#' not in line and line != '\n' and line.strip() != '':
-            # print(bef_p.strip() + '---' + line)
-            p_var_list.append(bef_p + ' : ' + line.strip())
-            data['p_var'] = p_var_list
+
+            p_var_pattern = '[A-Za-z0-9\u4e00-\u9fa5_]+'
+            if re.match(p_var_pattern, line.strip()) != None:
+                value = print_format(re.match(p_var_pattern, line.strip()).group())
+
+                p_info = {}
+                p_info['p_var'] = value
+
+                p_info_array = []
+                p_info_array.append(p_info)
+
+                p_info_array_info[bef_p] += p_info_array
+
+
+
 
         if '#' in line:
             bef_p = ''
 
 
+    # obj_list.append(obj_info_array_info)
+    # data['obj'] = obj_list
+    if len(obj_info_array_info) > 0:
+        obj_list.append(obj_info_array_info)
+        data['obj'] = obj_list
+    else:
+        class_info = {}
+        class_info['class'] = ""
+
+        class_info_array = []
+        class_info_array.append(class_info)
+
+        obj_info_array_info[bef_obj] = class_info_array
+
+        obj_list.append(obj_info_array_info)
+        data['obj'] = obj_list
+
+    p_list.append(p_info_array_info)
+    data['p'] = p_list
+    m_list.append(m_info_array_info)
+    data['m'] = m_list
+
 
     res_data.append(data)
+    print(res_data)
 
-    # print(json.dumps(res_data, encoding='utf-8', ensure_ascii=False))
 
+    # print('key = ' + os.path.basename(path))
+
+
+    ## post请求，塞入内存数据
     from ppServer.view import ppSendData
-
-
     ppSendData.send_data_to_project('Comb_Analyze', '文档代码一体化', '~~~')
-    ppSendData.send_data_to_proitem('Comb_Analyze', 'Inspector_Object', json.dumps(res_data, ensure_ascii=False))
+    ppSendData.send_data_to_proitem('Comb_Analyze', path, json.dumps(res_data, ensure_ascii=False))
+
 
 
     f.close()
@@ -231,12 +353,24 @@ def print_format(value):
 
     return res
 
+def dir_list(path, allfile):
+    filelist = os.listdir(path)
 
-if __name__ == '__main__':
-    read_file()
-    # import sys;
-    #
-    # sys.path = sys.path[1:];
-    # import django;
-    #
-    # print(django.__path__)
+    for filename in filelist:
+        filepath = os.path.join(path, filename)
+        if os.path.isdir(filepath):
+            dir_list(filepath, allfile)
+        else:
+            allfile.append(filepath)
+            if '.py' in filepath and '.pyc' not in filepath:
+                # print(filepath)
+
+                read_file(filepath)
+
+    return allfile
+
+
+
+# if __name__ == '__main__':
+    # read_file()
+    dir_list(BASE_DIR.replace('/Common/Server/ppServer/ppServer', ''), [])
